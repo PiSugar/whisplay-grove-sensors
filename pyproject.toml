@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "whisplay-grove-sensors"
+version = "0.1.0"
+description = "Linux support and demos for M5Stack I2C and UART Grove Units on Whisplay Port.X"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "PiSugar" }]
+dependencies = [
+  "smbus2>=0.4.3",
+  "pyserial>=3.5",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+
+[project.scripts]
+whisplay-grove = "whisplay_grove.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
