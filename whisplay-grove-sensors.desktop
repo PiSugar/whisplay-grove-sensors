@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Grove Sensor Hub
+Name[zh_CN]=Grove 传感器中心
+Comment=Detect and test Grove I2C and UART Units
+Comment[zh_CN]=检测并测试 Grove I2C 和 UART Unit
+Exec=/home/pi/whisplay-grove-sensors/run-dashboard.sh
+Icon=/home/pi/whisplay-grove-sensors/assets/grove-sensors.svg
+Terminal=false
+Categories=Settings;HardwareSettings;
+StartupNotify=true

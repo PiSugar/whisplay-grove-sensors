@@ -32,10 +32,21 @@ Whisplay system, I²C is `/dev/i2c-1` and UART is `/dev/serial0`.
 ## Install
 
 ```bash
-sudo apt install python3-venv i2c-tools
-python3 -m venv .venv
+sudo ./install.sh
+```
+
+The installer deploys the demo to `/opt/whisplay-grove-sensors`, creates its
+Python environment, grants the desktop user the required hardware groups, and
+automatically creates both `~/Desktop/05-Grove-Sensor-Hub.desktop` and the
+application-menu entry. Use `--desktop-user USER` when installing without
+`sudo` preserving `SUDO_USER`.
+
+For development directly from a checkout:
+
+```bash
+python3 -m venv --system-site-packages .venv
 . .venv/bin/activate
-pip install -e .
+pip install -e '.[test,ui]'
 ```
 
 The user running demos must have access to `i2c` and `dialout` devices.
@@ -85,6 +96,11 @@ other UART Units. Distinct non-blocking sound cues identify new NFC cards,
 input/presence/environment events, UART traffic, and Unit insertion/removal;
 pass `--mute` to disable them. Use `--windowed` when developing from a desktop
 session.
+
+The repository also includes `whisplay-grove-sensors.desktop` and
+`run-dashboard.sh`; `install.sh` deploys both automatically. Reopening the
+shortcut safely raises the single dashboard instance instead of starting
+competing I2C users.
 
 ## Address notes
 

@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1f3447"/>
+      <stop offset="1" stop-color="#0a0e14"/>
+    </linearGradient>
+    <linearGradient id="signal" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#43d393"/>
+      <stop offset="1" stop-color="#49d3e5"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="120" height="120" rx="28" fill="url(#bg)"/>
+  <rect x="22" y="42" width="52" height="44" rx="10" fill="#182431" stroke="#49d3e5" stroke-width="4"/>
+  <rect x="31" y="50" width="8" height="28" rx="3" fill="#43d393"/>
+  <rect x="44" y="50" width="8" height="28" rx="3" fill="#f5be4a"/>
+  <rect x="57" y="50" width="8" height="28" rx="3" fill="#49d3e5"/>
+  <path d="M74 64h14" fill="none" stroke="#49d3e5" stroke-width="5" stroke-linecap="round"/>
+  <path d="M86 48c10 3 17 9 20 16-3 7-10 13-20 16" fill="none" stroke="url(#signal)" stroke-width="6" stroke-linecap="round"/>
+  <path d="M93 35c17 5 27 16 31 29-4 13-14 24-31 29" fill="none" stroke="url(#signal)" stroke-width="5" stroke-linecap="round" opacity=".75"/>
+  <circle cx="22" cy="64" r="5" fill="#43d393"/>
+</svg>
