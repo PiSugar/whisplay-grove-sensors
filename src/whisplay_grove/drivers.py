@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import time
+import struct
 from dataclasses import dataclass
 
 
@@ -151,6 +152,81 @@ class SGP30:
         return {"eco2_ppm": _valid_word(data[:3]), "tvoc_ppb": _valid_word(data[3:])}
 
 
+class Joystick2:
+    """M5Stack Joystick2 axis, push button and RGB LED."""
+
+    address = 0x63
+
+    def __init__(self, bus, address: int | None = None):
+        self.bus = bus
+        self.address = address or self.address
+
+    def read(self) -> dict[str, int | bool]:
+        raw_x, raw_y = struct.unpack(
+            "<HH", self.bus.read_register(self.address, 0x00, 4)
+        )
+        x, y = struct.unpack(
+            "<hh", self.bus.read_register(self.address, 0x50, 4)
+        )
+        pressed = self.bus.read_register(self.address, 0x20, 1)[0] == 0
+        return {
+            "raw_x": raw_x,
+            "raw_y": raw_y,
+            "x": x,
+            "y": y,
+            "pressed": pressed,
+        }
+
+    def firmware_version(self) -> int:
+        return self.bus.read_register(self.address, 0xFE, 1)[0]
+
+    def set_rgb(self, red: int, green: int, blue: int) -> None:
+        for value in (red, green, blue):
+            if not 0 <= value <= 255:
+                raise ValueError("RGB channels must be between 0 and 255")
+        # The Unit register is BGR, matching M5Stack's official driver.
+        self.bus.write(self.address, bytes((0x30, blue, green, red)))
+
+
+class Scroll:
+    """M5Stack Scroll rotary encoder, push button and RGB LED."""
+
+    address = 0x40
+
+    def __init__(self, bus, address: int | None = None):
+        self.bus = bus
+        self.address = address or self.address
+
+    def _read_register(self, register: int, length: int) -> bytes:
+        # Scroll's STM32 firmware requires a STOP between selecting a register
+        # and reading it; Linux I2C_RDWR's usual repeated-start returns EAGAIN.
+        self.bus.write(self.address, bytes((register,)))
+        time.sleep(0.001)
+        return self.bus.read(self.address, length)
+
+    def read(self) -> dict[str, int | bool]:
+        value = struct.unpack(
+            "<h", self._read_register(0x10, 2)
+        )[0]
+        increment = struct.unpack(
+            "<h", self._read_register(0x50, 2)
+        )[0]
+        pressed = self._read_register(0x20, 1)[0] == 0
+        return {"value": value, "increment": increment, "pressed": pressed}
+
+    def firmware_version(self) -> int:
+        return self._read_register(0xFE, 1)[0]
+
+    def reset(self) -> None:
+        self.bus.write(self.address, b"\x40\x01")
+
+    def set_rgb(self, red: int, green: int, blue: int) -> None:
+        for value in (red, green, blue):
+            if not 0 <= value <= 255:
+                raise ValueError("RGB channels must be between 0 and 255")
+        self.bus.write(self.address, bytes((0x31, red, green, blue)))
+
+
 DRIVERS = {
     "ultrasonic": UltrasonicI2C,
     "bh1750": BH1750,
@@ -159,6 +235,8 @@ DRIVERS = {
     "mlx90614": MLX90614,
     "scd4x": SCD4x,
     "sgp30": SGP30,
+    "joystick2": Joystick2,
+    "scroll": Scroll,
 }
 
 
@@ -204,4 +282,3 @@ class NMEAParser:
         except (ValueError, IndexError):
             pass
         return self.fix
-

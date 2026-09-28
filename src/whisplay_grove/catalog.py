@@ -78,9 +78,11 @@ PERIPHERALS: tuple[Peripheral, ...] = (
     _i("cardkb", "CardKB Unit", "input", 0x5F),
     _i("encoder8", "Encoder8 Unit", "input", 0x41),
     _i("ext-encoder", "ExtEncoder Unit", "input", 0x59),
-    _i("joystick2", "Joystick2 Unit", "input", 0x63),
+    _i("joystick2", "Joystick2 Unit", "input", 0x63,
+       support="decoded", driver="joystick2"),
     _i("id", "ID Unit", "identification"),
-    _i("nfc", "NFC Unit (ST25R3916 family)", "identification", 0x28),
+    _i("nfc", "NFC Unit (ST25R3916 family)", "identification", 0x50,
+       support="decoded", driver="nfc", notes="Reads ISO14443A UID and beeps on a new card"),
     _i("rfid", "RFID Unit", "identification", 0x28),
     _i("qrcode-i2c", "QRCode Unit (I2C mode)", "identification", 0x21),
     _i("ac-measure", "AC Measure Unit", "measurement", 0x42),
@@ -118,6 +120,8 @@ PERIPHERALS: tuple[Peripheral, ...] = (
     _i("pbhub", "PbHUB Unit", "expander", 0x61),
     _i("relay4", "4-Relay Unit", "actuator", 0x26),
     _i("rtc8563", "RTC8563 Unit", "time", 0x51),
+    _i("scroll", "Scroll Unit", "input", 0x40,
+       support="decoded", driver="scroll"),
     _i("servos8", "8-Servo Unit", "actuator", 0x25),
     _i("step16", "Step16 Unit", "actuator", 0x48),
     _i("timer-pwr", "TimerPWR Unit", "power", 0x56),
@@ -173,4 +177,3 @@ def get_peripheral(slug: str) -> Peripheral:
 
 def find_conflicts(address: int) -> tuple[Peripheral, ...]:
     return tuple(p for p in PERIPHERALS if address in p.addresses)
-

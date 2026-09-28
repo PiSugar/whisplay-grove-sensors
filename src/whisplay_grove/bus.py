@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import errno
+import time
 from contextlib import AbstractContextManager
 
 
@@ -20,25 +22,41 @@ class I2CBus(AbstractContextManager["I2CBus"]):
     def __exit__(self, *args: object) -> None:
         self.close()
 
+    def _retry(self, operation):
+        """Retry short-lived Linux I2C arbitration/device-response errors."""
+        for attempt in range(5):
+            try:
+                return operation()
+            except OSError as exc:
+                if exc.errno not in (errno.EAGAIN, errno.EREMOTEIO) or attempt == 4:
+                    raise
+                time.sleep(0.002 * (attempt + 1))
+
     def write(self, address: int, data: bytes) -> None:
         from smbus2 import i2c_msg
 
-        self._bus.i2c_rdwr(i2c_msg.write(address, data))
+        self._retry(lambda: self._bus.i2c_rdwr(i2c_msg.write(address, data)))
 
     def read(self, address: int, length: int) -> bytes:
         from smbus2 import i2c_msg
 
-        msg = i2c_msg.read(address, length)
-        self._bus.i2c_rdwr(msg)
-        return bytes(msg)
+        def transaction() -> bytes:
+            msg = i2c_msg.read(address, length)
+            self._bus.i2c_rdwr(msg)
+            return bytes(msg)
+
+        return self._retry(transaction)
 
     def exchange(self, address: int, output: bytes, read_length: int) -> bytes:
         from smbus2 import i2c_msg
 
-        write_msg = i2c_msg.write(address, output)
-        read_msg = i2c_msg.read(address, read_length)
-        self._bus.i2c_rdwr(write_msg, read_msg)
-        return bytes(read_msg)
+        def transaction() -> bytes:
+            write_msg = i2c_msg.write(address, output)
+            read_msg = i2c_msg.read(address, read_length)
+            self._bus.i2c_rdwr(write_msg, read_msg)
+            return bytes(read_msg)
+
+        return self._retry(transaction)
 
     def read_register(self, address: int, register: int, length: int) -> bytes:
         return self.exchange(address, bytes((register,)), length)
@@ -81,4 +99,3 @@ class SerialPort(AbstractContextManager["SerialPort"]):
 
     def write(self, data: bytes) -> int:
         return self._serial.write(data)
-

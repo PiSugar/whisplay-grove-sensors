@@ -4,12 +4,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import time
 from dataclasses import asdict
 
 from .bus import I2CBus, SerialPort
 from .catalog import PERIPHERALS, find_conflicts, get_peripheral
 from .drivers import DRIVERS, NMEAParser
+from .nfc import ST25R3916
+from .triple_demo import run as run_triple_demo
 
 
 def _address(value: str) -> int:
@@ -54,6 +57,8 @@ def _conflicts(args: argparse.Namespace) -> int:
 
 
 def _demo_i2c(args: argparse.Namespace, item) -> int:
+    if item.driver == "nfc":
+        return _demo_nfc(args, item)
     address = args.address
     if address is None and len(item.addresses) == 1:
         address = item.addresses[0]
@@ -74,6 +79,55 @@ def _demo_i2c(args: argparse.Namespace, item) -> int:
             state = "present" if bus.probe(candidate) else "not found"
             print(f"{item.name} at 0x{candidate:02x}: {state}")
     return 0
+
+
+def _beep() -> None:
+    try:
+        subprocess.run(
+            (
+                "sox", "-q", "-n", "-t", "alsa", "plughw:CARD=whisplaysound",
+                "synth", "0.08", "sine", "1200",
+            ),
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+    except FileNotFoundError:
+        print("\a", end="", flush=True)
+
+
+def _demo_nfc(args: argparse.Namespace, item) -> int:
+    address = args.address if args.address is not None else item.addresses[0]
+    last_uid: bytes | None = None
+    last_seen = 0.0
+    with I2CBus(args.bus) as bus:
+        reader = ST25R3916(bus, address)
+        chip_type, revision = reader.begin()
+        print(
+            f"{item.name} ready at 0x{address:02x} "
+            f"(type={chip_type}, revision={revision}); present a card",
+            flush=True,
+        )
+        try:
+            while True:
+                card = reader.detect()
+                now = time.monotonic()
+                if card is not None:
+                    if card.uid != last_uid:
+                        print(
+                            f"card UID={card.uid_hex} ATQA=0x{card.atqa:04x} "
+                            f"SAK=0x{card.sak:02x}",
+                            flush=True,
+                        )
+                        _beep()
+                    last_uid = card.uid
+                    last_seen = now
+                elif last_uid is not None and now - last_seen >= 0.8:
+                    last_uid = None
+                time.sleep(max(0.05, args.interval))
+        finally:
+            reader.close()
 
 
 def _demo_uart(args: argparse.Namespace, item) -> int:
@@ -103,6 +157,19 @@ def _demo(args: argparse.Namespace) -> int:
     return _demo_i2c(args, item) if item.transport == "i2c" else _demo_uart(args, item)
 
 
+def _triple_demo(args: argparse.Namespace) -> int:
+    return run_triple_demo(args.bus, args.interval)
+
+
+def _dashboard(args: argparse.Namespace) -> int:
+    from .dashboard import DashboardApp, DashboardBackend
+
+    backend = DashboardBackend(args.mode, args.bus, args.port, sound=not args.mute)
+    return DashboardApp(
+        backend, args.windowed, args.width, args.height
+    ).run()
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="whisplay-grove")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -129,6 +196,25 @@ def build_parser() -> argparse.ArgumentParser:
     demo.add_argument("--baud", type=int)
     demo.add_argument("--interval", type=float, default=1.0)
     demo.set_defaults(func=_demo)
+
+    triple = sub.add_parser(
+        "triple-demo", help="test NFC, Joystick2 and Scroll together"
+    )
+    triple.add_argument("--bus", type=int, default=1)
+    triple.add_argument("--interval", type=float, default=0.1)
+    triple.set_defaults(func=_triple_demo)
+
+    dashboard = sub.add_parser(
+        "dashboard", help="open the aggregate touch UI for every Grove Unit"
+    )
+    dashboard.add_argument("--mode", choices=("i2c", "uart"), default="i2c")
+    dashboard.add_argument("--bus", type=int, default=1)
+    dashboard.add_argument("--port", default="/dev/serial0")
+    dashboard.add_argument("--windowed", action="store_true")
+    dashboard.add_argument("--width", type=int, default=720)
+    dashboard.add_argument("--height", type=int, default=720)
+    dashboard.add_argument("--mute", action="store_true")
+    dashboard.set_defaults(func=_dashboard)
     return parser
 
 
@@ -146,4 +232,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

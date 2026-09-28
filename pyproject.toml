@@ -17,13 +17,14 @@ dependencies = [
 
 [project.optional-dependencies]
 test = ["pytest>=8"]
+ui = ["pygame>=2.6"]
 
 [project.scripts]
 whisplay-grove = "whisplay_grove.cli:main"
+whisplay-grove-dashboard = "whisplay_grove.dashboard:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-

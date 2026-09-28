@@ -1,8 +1,8 @@
 # whisplay-grove-sensors
 
 Linux/Python support for M5Stack I²C and UART Grove Units connected to the
-Whisplay Grove Port.X. Port.X is selected by GPIO27 (`0 = UART`, `1 = I²C`)
-and by the `whisplay-plus` device-tree overlay.
+Whisplay Grove Port.X. Port.X is selected by GPIO27 (`0 = I²C`, `1 = UART`)
+and by the `whisplay-plus` device-tree overlay. I²C is the default.
 
 The project provides:
 
@@ -19,10 +19,10 @@ The project provides:
 Persistent selection is made in `/boot/firmware/config.txt`:
 
 ```ini
-# I2C: GPIO27 high
-dtoverlay=whisplay-plus,port_x_i2c
+# I2C (default): GPIO27 low
+dtoverlay=whisplay-plus
 
-# UART: GPIO27 low
+# UART: GPIO27 high
 dtoverlay=whisplay-plus,port_x_uart
 ```
 
@@ -54,6 +54,9 @@ whisplay-grove demo env-iii
 whisplay-grove demo co2
 whisplay-grove demo tvoc
 whisplay-grove demo ncir
+whisplay-grove demo nfc --interval 0.1
+whisplay-grove triple-demo --interval 0.1
+whisplay-grove dashboard
 
 whisplay-grove demo gps-v11 --port /dev/serial0
 whisplay-grove demo uhf-rfid --port /dev/serial0 --baud 115200
@@ -62,6 +65,26 @@ whisplay-grove demo uhf-rfid --port /dev/serial0 --baud 115200
 `demo` runs continuously until Ctrl-C. For a Unit whose proprietary protocol
 has not yet been decoded, the demo deliberately performs only a safe I²C
 address probe or a read-only UART monitor.
+
+The NFC demo continuously polls ISO14443A cards. It prints a newly presented
+card's UID and emits one short speaker beep; keeping the same card in the field
+does not cause repeated beeps.
+
+`triple-demo` tests NFC (`0x50`), Joystick2 (`0x63`) and Scroll (`0x40`) at
+the same time. It lights both input Units, continuously prints joystick axes,
+buttons and rotary encoder values as JSON, and reports ISO14443A card UIDs.
+
+## Aggregate touch dashboard
+
+`whisplay-grove dashboard` opens a full-screen touch UI. The I2C/UART tabs
+switch Port.X electrically through GPIO27, and panels appear as Units are
+detected. Decoded Units show live engineering values; every other cataloged
+I2C Unit gets an online/address/candidate panel. UART mode cycles the catalog's
+common baud rates, decodes NMEA GPS data, and shows a safe raw monitor for all
+other UART Units. Distinct non-blocking sound cues identify new NFC cards,
+input/presence/environment events, UART traffic, and Unit insertion/removal;
+pass `--mute` to disable them. Use `--windowed` when developing from a desktop
+session.
 
 ## Address notes
 
@@ -82,4 +105,3 @@ Grove connector alone does not guarantee that an unknown third-party board has
   high-level Linux protocol implementation is still pending.
 
 See [docs/M5STACK_UNITS.md](docs/M5STACK_UNITS.md) for the complete inventory.
-
